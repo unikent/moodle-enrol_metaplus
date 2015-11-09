@@ -28,3 +28,6 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->version   = 2015110000;        // The current plugin version (Date: YYYYMMDDXX).
 $plugin->requires  = 2014050800;        // Requires this Moodle version.
 $plugin->component = 'enrol_metaplus';   // Full name of the plugin (used for diagnostics).
+$plugin->dependencies = array(
+    'enrol_meta' => 2015082400
+);
