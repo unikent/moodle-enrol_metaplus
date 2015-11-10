@@ -72,25 +72,15 @@ class enrol_metaplus_addinstance_form extends moodleform {
         }
         $rs->close();
 
-        $groups = array(0 => get_string('none'));
-        if (has_capability('moodle/course:managegroups', context_course::instance($course->id))) {
-            $groups[ENROL_META_CREATE_GROUP] = get_string('creategroup', 'enrol_meta');
-        }
-        foreach (groups_get_all_groups($course->id) as $group) {
-            $groups[$group->id] = format_string($group->name, true, array('context' => context_course::instance($course->id)));
-        }
-
         $mform->addElement('header', 'general', get_string('pluginname', 'enrol_meta'));
 
         $mform->addElement('select', 'link', get_string('linkedcourse', 'enrol_metaplus'), $courses, array('multiple' => 'multiple', 'class' => 'chosen'));
-        $mform->addRule('link', get_string('required'), 'required', null, 'client');
-
-        $mform->addElement('select', 'customint2', get_string('addgroup', 'enrol_meta'), $groups);
+        $mform->addRule('link', get_string('required'), 'required', null, 'server');
 
         // Add role sync list.
         $coursecontext = \context_course::instance($course->id);
         $roles = get_assignable_roles($coursecontext);
-        $mform->addElement('select', 'roleid', get_string('roleexclusions', 'enrol_metaplus'), $roles, array('multiple' => 'multiple'));
+        $mform->addElement('select', 'roleexclusions', get_string('roleexclusions', 'enrol_metaplus'), $roles, array('multiple' => 'multiple'));
 
         $mform->addElement('hidden', 'id', null);
         $mform->setType('id', PARAM_INT);
@@ -102,11 +92,9 @@ class enrol_metaplus_addinstance_form extends moodleform {
         if ($instance) {
             $data['link'] = $instance->customint1;
             $data['enrolid'] = $instance->id;
-            $data['customint2'] = $instance->customint2;
             $mform->freeze('link');
             $this->add_action_buttons();
         } else {
-            $data['customint2'] = ENROL_META_CREATE_GROUP;
             $this->add_add_buttons();
         }
 
@@ -135,13 +123,19 @@ class enrol_metaplus_addinstance_form extends moodleform {
             return $errors;
         }
 
-        // TODO: this is duplicated here because it may be necessary once we implement ajax course selection element
+        // We may have multiple courses.
+        foreach ($data['link'] as $course) {
+            if (!$c = $DB->get_record('course', array('id' => $course))) {
+                $errors['link'] = get_string('required');
+                continue;
+            }
 
-        if (!$c = $DB->get_record('course', array('id' => $data['link']))) {
-            $errors['link'] = get_string('required');
-        } else {
-            $coursecontext = context_course::instance($c->id);
-            $existing = $DB->get_records('enrol', array('enrol' => 'meta', 'courseid' => $this->course->id), '', 'customint1, id');
+            $coursecontext = \context_course::instance($c->id);
+            $existing = $DB->get_records('enrol', array(
+                'enrol' => 'meta',
+                'courseid' => $this->course->id
+            ), '', 'customint1, id');
+
             if (!$c->visible and !has_capability('moodle/course:viewhiddencourses', $coursecontext)) {
                 $errors['link'] = get_string('error');
             } else if (!has_capability('enrol/meta:selectaslinked', $coursecontext)) {

@@ -38,6 +38,22 @@ require_once($CFG->dirroot . "/enrol/meta/lib.php");
 class enrol_metaplus_plugin extends enrol_meta_plugin
 {
     /**
+     * Returns localised name of enrol instance
+     *
+     * @param stdClass $instance (null is accepted too)
+     * @return string
+     */
+    public function get_instance_name($instance) {
+        global $DB;
+
+        if (empty($instance) || empty($instance->name)) {
+            return get_string('pluginname', 'enrol_metaplus');
+        } else {
+            return format_string($instance->name);
+        }
+    }
+
+    /**
      * Returns link to page which may be used to add new instance of enrolment plugin in course.
      *
      * @param int $courseid
@@ -53,5 +69,33 @@ class enrol_metaplus_plugin extends enrol_meta_plugin
         return new moodle_url('/enrol/metaplus/addinstance.php', array(
             'id' => $courseid
         ));
+    }
+
+    /**
+     * Returns edit icons for the page with list of instances.
+     * @param stdClass $instance
+     * @return array
+     */
+    public function get_action_icons(stdClass $instance) {
+        global $OUTPUT;
+
+        if ($instance->enrol !== 'metaplus') {
+            throw new coding_exception('invalid enrol instance!');
+        }
+
+        $context = context_course::instance($instance->courseid);
+        $icons = array();
+        if (has_capability('enrol/meta:config', $context)) {
+            $editlink = new moodle_url("/enrol/metaplus/addinstance.php", array(
+                'id' => $instance->courseid,
+                'enrolid' => $instance->id
+            ));
+
+            $icons[] = $OUTPUT->action_icon($editlink, new pix_icon('t/edit', get_string('edit'), 'core', array(
+                'class' => 'iconsmall'
+            )));
+        }
+
+        return $icons;
     }
 }

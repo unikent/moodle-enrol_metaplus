@@ -72,35 +72,69 @@ if ($mform->is_cancelled()) {
 }
 
 if ($data = $mform->get_data()) {
-    // Create a new group (we always want to do this if there isnt one already).
-    if (!empty($data->customint2) && $data->customint2 == ENROL_META_CREATE_GROUP) {
-        $data->customint2 = enrol_meta_create_new_group($course->id, $data->link);
+    // Go through every link and grab a group.
+    $links = array();
+    foreach ($data->link as $c) {
+        $links[$c] = enrol_meta_create_new_group($course->id, $c);
     }
 
+    $roleexclusions = implode(',', $data->roleexclusions);
     if ($instance) {
-        // Have we changed group?
-        if ($data->customint2 != $instance->customint2) {
-            $DB->update_record('enrol', array(
-                'id' => $instance->id,
-                'customint2' => $data->customint2
-            ));
-
-            enrol_meta_sync($course->id);
-        }
-    } else {
-        // This is a brand new instance.
-        $eid = $enrol->add_instance($course, array(
-            'customint1' => $data->link,
-            'customint2' => $data->customint2
+        $records = $DB->get_records('enrol_metaplus', array(
+            'enrolid' => $instance->id,
         ));
 
-        enrol_meta_sync($course->id);
+        // Removals.
+        $courseids = array();
+        foreach ($records as $record) {
+            if (!isset($links[$record->courseid])) {
+                $DB->delete_record('enrol_metaplus', array(
+                    $record->id
+                ));
+            }
+
+            $courseids[] = $record->courseid;
+        }
+
+        // Additions.
+        foreach ($links as $c => $group) {
+            if (!in_array($c, $courseids)) {
+                $DB->insert_record('enrol_metaplus', array(
+                    'enrolid' => $instance->id,
+                    'courseid' => $c,
+                    'groupid' => $group,
+                ));
+            }
+        }
+
+        // Ensure role exclusions are updated.
+        if ($instance->customtext1 !== $roleexclusions) {
+             $DB->update_record('enrol', array(
+                'id' => $instance->id,
+                'customtext1' => $roleexclusions
+            ));
+        }
+    } else {
+        // Insert new record.
+        $eid = $enrol->add_instance($course, array(
+            'customtext1' => $roleexclusions
+        ));
+
+        // Insert records.
+        foreach ($links as $c => $group) {
+            $DB->insert_record('enrol_metaplus', array(
+                'enrolid' => $eid,
+                'courseid' => $c,
+                'groupid' => $group,
+            ));
+        }
     }
+
     redirect($returnurl);
 }
 
 $PAGE->set_heading($course->fullname);
-$PAGE->set_title(get_string('pluginname', 'enrol_meta'));
+$PAGE->set_title(get_string('pluginname', 'enrol_metaplus'));
 
 echo $OUTPUT->header();
 
