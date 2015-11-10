@@ -27,3 +27,6 @@ $string['pluginname'] = 'Meta+ enrolments';
 $string['pluginname_desc'] = 'Course meta link enrolment plugin synchronises enrolments and roles in two different courses.';
 
 $string['metaplus:config'] = 'Configure meta+ enrol instances';
+
+$string['linkedcourse'] = 'Link course(s)';
+$string['roleexclusions'] = 'Exclude roles';

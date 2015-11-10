@@ -45,7 +45,7 @@ class enrol_metaplus_plugin extends enrol_meta_plugin
      */
     public function get_newinstance_link($courseid) {
         $context = context_course::instance($courseid, MUST_EXIST);
-        if (!has_capability('moodle/course:enrolconfig', $context) or !has_capability('enrol/meta:config', $context)) {
+        if (!has_capability('moodle/course:enrolconfig', $context) || !has_capability('enrol/meta:config', $context)) {
             return null;
         }
 
