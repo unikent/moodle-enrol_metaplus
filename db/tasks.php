@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Meta+ enrolment plugin version specification.
+ * Meta+ course enrolment plugin.
  *
  * @package    enrol_metaplus
  * @copyright  2015 University of Kent
@@ -23,12 +23,14 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->version   = 2015110002;        // The current plugin version (Date: YYYYMMDDXX).
-$plugin->requires  = 2014050800;        // Requires this Moodle version.
-$plugin->component = 'enrol_metaplus';   // Full name of the plugin (used for diagnostics).
-$plugin->dependencies = array(
-    'enrol_meta' => 2015082400,
-    'theme_kent' => 2015101800
+$tasks = array(
+    array(
+        'classname' => 'local_kent\task\config_shouter',
+        'blocking' => 0,
+        'minute' => '*/30',
+        'hour' => '*',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*'
+    )
 );
