@@ -37,37 +37,36 @@ class enrol_metaplus_addinstance_form extends moodleform {
         $instance = $this->_customdata['instance'];
         $this->course = $course;
 
+        $existing = array();
         if ($instance) {
-            $where = 'WHERE c.id = :courseid';
-            $params = array('courseid' => $instance->customint1);
-            $existing = array();
-        } else {
-            $where = '';
-            $params = array();
-            $existing = $DB->get_records('enrol', array('enrol' => 'meta', 'courseid' => $course->id), '', 'customint1, id');
+            $existing = $DB->get_records('enrol_metaplus', array(
+                'enrolid' => $instance->id
+            ), '', 'courseid, id');
         }
 
         $courses = array();
-        $select = ', ' . context_helper::get_preload_record_columns_sql('ctx');
-        $join = "LEFT JOIN {context} ctx ON (ctx.instanceid = c.id AND ctx.contextlevel = :contextlevel)";
-
-        $plugin = enrol_get_plugin('meta');
-        $sortorder = 'c.' . $plugin->get_config('coursesort', 'sortorder') . ' ASC';
-
-        $sql = "SELECT c.id, c.fullname, c.shortname, c.visible $select FROM {course} c $join $where ORDER BY $sortorder";
-        $rs = $DB->get_recordset_sql($sql, array('contextlevel' => CONTEXT_COURSE) + $params);
+        $select = context_helper::get_preload_record_columns_sql('ctx');
+        $sql = <<<SQL
+            SELECT c.id, c.fullname, c.shortname, c.visible, $select
+            FROM {course} c
+            LEFT JOIN {context} ctx
+                ON (ctx.instanceid = c.id AND ctx.contextlevel = :contextlevel)
+SQL;
+        $rs = $DB->get_recordset_sql($sql, array('contextlevel' => CONTEXT_COURSE));
         foreach ($rs as $c) {
-            if ($c->id == SITEID or $c->id == $course->id or isset($existing[$c->id])) {
+            if ($c->id == SITEID || $c->id == $course->id) {
                 continue;
             }
             context_helper::preload_from_record($c);
             $coursecontext = context_course::instance($c->id);
-            if (!$c->visible and !has_capability('moodle/course:viewhiddencourses', $coursecontext)) {
+            if (!$c->visible && !has_capability('moodle/course:viewhiddencourses', $coursecontext)) {
                 continue;
             }
+
             if (!has_capability('enrol/meta:selectaslinked', $coursecontext)) {
                 continue;
             }
+
             $courses[$c->id] = $coursecontext->get_context_name(false);
         }
         $rs->close();
@@ -90,9 +89,9 @@ class enrol_metaplus_addinstance_form extends moodleform {
 
         $data = array('id' => $course->id);
         if ($instance) {
-            $data['link'] = $instance->customint1;
+            $data['link'] = implode(',', array_keys($existing));
             $data['enrolid'] = $instance->id;
-            $mform->freeze('link');
+            $data['roleexclusions'] = $instance->customtext1;
             $this->add_action_buttons();
         } else {
             $this->add_add_buttons();
